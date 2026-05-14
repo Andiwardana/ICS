@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- User Profile Rules ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() <= 128 &&
+             data.email is string && data.email.size() <= 128 &&
+             data.role in ['employee', 'admin'] &&
+             data.createdAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email']) &&
+                       request.resource.data.name is string && request.resource.data.name.size() <= 128 &&
+                       request.resource.data.email is string && request.resource.data.email.size() <= 128;
+    }
+
+    // --- Attendance Rules ---
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['userId', 'category', 'employeeType', 'timestamp', 'location']) &&
+             data.userId == request.auth.uid &&
+             data.category in ['Customer', 'Luar'] &&
+             data.employeeType in ['Employee', 'Kurir', 'Teknisi'] &&
+             data.timestamp == request.time &&
+             data.location.latitude is number &&
+             data.location.longitude is number &&
+             (!('photoBase64' in data) || (data.photoBase64 is string && data.photoBase64.size() <= 2000000)) &&
+             (!('shifting' in data) || (data.shifting is string && data.shifting.size() <= 300)) &&
+             (!('reason' in data) || (data.reason is string && data.reason.size() <= 1000));
+    }
+
+    match /attendance/{recordId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidAttendance(request.resource.data);
+    }
+  }
+}

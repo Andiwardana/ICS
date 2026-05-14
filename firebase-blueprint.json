@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "user": {
+      "title": "User Profile",
+      "description": "Employee profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["employee", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "attendance": {
+      "title": "Attendance Record",
+      "description": "Clock-in logs with location, category, and role",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string", "enum": ["Customer", "Luar"] },
+        "employeeType": { "type": "string", "enum": ["Employee", "Kurir", "Teknisi"] },
+        "shifting": { "type": "string" },
+        "reason": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" }
+          }
+        },
+        "photoBase64": { "type": "string" }
+      },
+      "required": ["userId", "category", "employeeType", "timestamp", "location"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "User profiles by UID"
+    },
+    "/attendance/{recordId}": {
+      "schema": "attendance",
+      "description": "Attendance history logs"
+    }
+  }
+}

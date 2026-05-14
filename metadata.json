@@ -1,0 +1,9 @@
+{
+  "name": "Absensi Kita",
+  "description": "A mobile-first employee attendance tracking system with camera selfie and GPS location features.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
